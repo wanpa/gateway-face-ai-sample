@@ -6,7 +6,7 @@ import base64
 import os
 import cv2
 
-def cv2MosaicOnTheFace(image_path):
+def cv2MosaicOnTheFace(image_path,mosic):
 
   #ファイル読み込み
   image = cv2.imread(image_path)
@@ -14,8 +14,8 @@ def cv2MosaicOnTheFace(image_path):
   #グレースケール変換
   image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-  #カスケード識別器のファイルパス　絶対パスで指定に変更してください！！！！
-  cascade_path = "haarcascade_frontalface_default.xml"
+  #カスケード識別器のファイルパス　絶対パスで指定
+  cascade_path = "/app/models/haarcascade_frontalface_default.xml"
 
   #カスケード分類器の特徴量を取得する
   cascade = cv2.CascadeClassifier(cascade_path)
@@ -42,7 +42,19 @@ def cv2MosaicOnTheFace(image_path):
 
       #検出した顔を囲む矩形の作成
       for rect in facerect:
-          cv2.rectangle(image, tuple(rect[0:2]),tuple(rect[0:2]+rect[2:4]), color, thickness=-1)
+
+          if(mosic=="black"):
+            cv2.rectangle(image, tuple(rect[0:2]),tuple(rect[0:2]+rect[2:4]), color, thickness=-1)
+          else:
+            #https://qiita.com/haseshin/items/38383a500cbba21f4467
+            #顔部分の画像の切り出し
+            cut_img = image[rect[1]:rect[1]+rect[3],rect[0]:rect[0]+rect[2]]
+            #20分の1のサイズに縮小
+            cut_img = cv2.resize(cut_img,(rect[2]//20, rect[3]//20))
+            #元のサイズに戻す。cv2.INTER_NEARESTを使わないと滑らかになる。
+            cut_img = cv2.resize(cut_img,(rect[2], rect[3]),cv2.INTER_NEAREST)
+            #切り出した画像で元の画像を置き換え
+            image[rect[1]:rect[1]+rect[3],rect[0]:rect[0]+rect[2]]=cut_img
 
       #認識結果の保存
       cv2.imwrite(image_path, image)
@@ -62,19 +74,19 @@ try:
   # file.close()
   image_path1 = path + "/" + post["clusters"][3]["value"]
   #画像黒塗り
-  cv2MosaicOnTheFace(image_path1)
+  cv2MosaicOnTheFace(image_path1,"black")
   file = open(image_path1, 'rb').read()
   enc_file1 = base64.b64encode( file ).decode('utf-8')
 
   image_path2 = path + "/" + post["clusters"][4]["value"]
-  #画像黒塗り
-  cv2MosaicOnTheFace(image_path2)
+  #画像モザイク
+  cv2MosaicOnTheFace(image_path2,"mosaic")
   file = open(image_path2, 'rb').read()
   enc_file2 = base64.b64encode( file ).decode('utf-8')
 
   image_path3 = path + "/" + post["clusters"][5]["value"]
-  #画像黒塗り
-  cv2MosaicOnTheFace(image_path3)
+  #画像モザイク
+  cv2MosaicOnTheFace(image_path3,"mosaic")
   file = open(image_path3, 'rb').read()
   enc_file3 = base64.b64encode( file ).decode('utf-8')
   # file.close()
